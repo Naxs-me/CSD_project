@@ -39,34 +39,21 @@
     struct Snode *snode;
 }
 
-%token OCB CCB OSB CSB ASG SCL COM PTR DT ID NUM PLS MIN FSH BSH PCT LOR LAND BOR BAND BXOR EQL NEQL GL LT GTE LTE OB CB QM CL STR
+%token OCB CCB OSB CSB ASG SCL COM PTR DT ID NUM PLS MIN FSH BSH PCT LOR LAND BOR BAND BXOR EQL NEQL GT LT GTE LTE OB CB QM CL STR BLK MN IF ELS FN OS
 
-%type <dval> NUM
-%type <lexeme> ID 
-%type <type> DT
-%type <snode> C
-%type <snode> D
-%type <snode> E
-%type <snode> F
-%type <snode> G
-%type <lexeme> H
-%type <snode> I
-%type <dval> J
-%type <lexeme> K
-%type <lexeme> L
-%type <lexeme> M
-%type <lexeme> N
+//%type <dval> NUM
+
 
 %%
 
 //main function , point where program starts to run
-main:                   MN OB CB OCB compound_statement CCB;
+main:                   MN OB CB OCB io_statements CCB;
 
 // io_statement -> IO
 io_statements:          statement 
                         | io_statements statement;
 // statement -> IO    
-statement:              io_statement
+statement:              io_statement SCL
                         | selection_statement;
 
 // selection_statement -> expression
@@ -104,10 +91,10 @@ io_statement:           assignment_statement
                         | block;
 
 // assignment_statement -> IO
-assignment_statement:   ID ASG expression;
+assignment_statement:   {cout<<"hello3";}ID{cout<<"hello4";} ASG {cout<<"hello5";}expression;
 
 // output_statement -> IO
-output_statement:       ;
+output_statement:       OS;
 
 // block -> IO
 block:                  BLK OCB io_statements CCB;
@@ -116,7 +103,7 @@ block:                  BLK OCB io_statements CCB;
 expression:             function_call
                         | io_statement
                         | selection_statement
-                        ! additive_expression
+                        | additive_expression
                         ;
 
 additive_expression:    multiplicative_expression
@@ -124,12 +111,14 @@ additive_expression:    multiplicative_expression
                         | additive_expression MIN multiplicative_expression;
 
 multiplicative_expression:  identifier
-                            | multiplicative_expression * identifier
-                            | multiplicative_expression / identifier
-                            | multiplicative_expression % identifier;
+                            | multiplicative_expression PTR identifier
+                            | multiplicative_expression FSH identifier
+                            | multiplicative_expression PCT identifier;
 
 identifier:             NUM
                         | ID;
+
+function_call:          FN;
 
 %%
 

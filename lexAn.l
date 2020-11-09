@@ -12,13 +12,14 @@ ID  {ALPH}({ALPH}|{INT})*
 
 %%
 "main"  {return MN;}
+"block" {return BLK;}
 "void"  {strcpy(yylval.type,"void"); return DT;}
 "int"   {strcpy(yylval.type,"int"); return DT;}
 "float" {strcpy(yylval.type,"float"); return DT;}
 "char"  {strcpy(yylval.type,"char"); return DT;}
 "if"    {return IF;}
 "else"  {return ELS;}
-{ID}    {strcpy(yylval.lexeme,yytext); return ID;}
+{ID}    {printf("lex %s\n",yytext);return ID;}
 {NUM}   {yylval.dval = atof(yytext); return NUM;}
 "?"     {return QM;}
 "{"     {return OCB;}
