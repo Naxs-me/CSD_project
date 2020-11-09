@@ -11,8 +11,8 @@ NUM {INT}+"."?{INT}*
 ID  {ALPH}({ALPH}|{INT})*
 
 %%
-"main"  {strcpy(yylval.type,"main"); return MN;}
-"bool"  {strcpy(yylval.type,"void"); return DT;}
+"main"  {return MN;}
+"void"  {strcpy(yylval.type,"void"); return DT;}
 "int"   {strcpy(yylval.type,"int"); return DT;}
 "float" {strcpy(yylval.type,"float"); return DT;}
 "char"  {strcpy(yylval.type,"char"); return DT;}
