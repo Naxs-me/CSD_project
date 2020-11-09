@@ -16,10 +16,8 @@ ID  {ALPH}({ALPH}|{INT})*
 "int"   {strcpy(yylval.type,"int"); return DT;}
 "float" {strcpy(yylval.type,"float"); return DT;}
 "char"  {strcpy(yylval.type,"char"); return DT;}
-"bool"  {strcpy(yylval.type,"bool"); return DT;}
 "if"    {return IF;}
 "else"  {return ELS;}
-"while" {return WHL;}
 {ID}    {strcpy(yylval.lexeme,yytext); return ID;}
 {NUM}   {yylval.dval = atof(yytext); return NUM;}
 "?"     {return QM;}
