@@ -20,7 +20,7 @@ ID  {ALPH}({ALPH}|{INT})*
 "if"    {return IF;}
 "else"  {return ELS;}
 {ID}    {strcpy(yylval.lexeme,yytext) ;return ID;}
-{NUM}   {strcpy(yylval.type,"int"); return NUM;}
+{NUM}   {strcpy(yylval.dval,yytext); return NUM;}
 "?"     {return QM;}
 "{"     {return OCB;}
 "}"     {return CCB;}
