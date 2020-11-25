@@ -61,7 +61,7 @@ string get_f(int id1, int id2)
 
     vector<string> v = get<4>(node[id2]).params;
 
-    for(int i = 0 ; i < v.size() ; i++)
+    for(int i = v.size()-1 ; i >= 0 ; i--)
     {
         s += " ";
         s += v[i];
