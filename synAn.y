@@ -101,7 +101,7 @@ function_defination:    ID OB param_def CB OCB {local l;string temp = $1; if(nam
                                                                                         }
                                                                                         scope.push(l);
                                                                                         
-                                                                                        }   expression {scope.top().print_3add();scope.pop();} CCB {string temp = $1;$$ = name2id[temp];};
+                                                                                        }   expression {get<5>(scope.top().node[$7]).push_back("return " + get<6>(scope.top().node[$7]));scope.top().print_3add();print_code(scope.top(),$7);scope.pop();} CCB {string temp = $1;$$ = name2id[temp];};
 
 pram_list:             pram_lists {$$ = $1;}
                         | {$$ = global_id++;push_tuple_global();}
