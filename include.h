@@ -1,17 +1,10 @@
-#include<iostream>
-#include<vector>
-#include<stack>
-#include<stdio.h>
-#include<string.h>
-#include<stdlib.h>
-#include<string>
-#include<map>
-#include<tuple>
-#include <functional>
+#include<bits/stdc++.h>
 
 using namespace std;
 
 typedef unsigned long long intl;
+
+ofstream tac("AC.txt");
 
 
 class func_sign{
@@ -26,11 +19,13 @@ class func_sign{
 
 class local{
     public:
-    //           type     value    line  name     function_sign
-    vector<tuple<string , string , int , string , func_sign>> node;
+    //          0 type    1 value  2 line 3 name  4 function_sign 5 current code  6 last variable
+    vector<tuple<string , string , int , string ,   func_sign     , vector<string>  ,   string> > node;
     unsigned long long int local_id;
     map<string , int> name2id;
+    vector<string> lines;
     local();
+    void print_3add();
 };
 
 local::local()
@@ -38,12 +33,63 @@ local::local()
     local_id = 0;
 }
 
+void local::print_3add()
+{
+    for(int i = 0; i < lines.size(); i++)
+    {
+        tac << lines[i] << endl;
+    }
+}
 
 //  name     id
 map<string , int> name2id;
 //           type     value    line  name     function_sign
-vector<tuple<string , string , int , string , func_sign>> node;
+vector<tuple<string , string , int , string , func_sign >> node;
 unsigned long long global_id = 0;
+
+unsigned long long label_id = 0;
+unsigned long long t_id = 0;
+unsigned long long dec_count = 0;
+
+string get_f(int id1, int id2)
+{
+    string s = "function ";
+
+    s += get<3>(node[id1]);
+
+    s += " 0";
+
+    vector<string> v = get<4>(node[id2]).params;
+
+    for(int i = 0 ; i < v.size() ; i++)
+    {
+        s += " ";
+        s += v[i];
+    }
+
+    return s;
+}
+
+string get_m(){
+    string s = "function main ";
+
+    return s;
+}
+
+string get_label()
+{
+    string s = "_L";
+    s += to_string(label_id++);
+    s += " :";
+    return s;
+}
+
+string get_temp()
+{
+    string s = "_t";
+    s += to_string(t_id++);
+    return s;
+}
 
 stack<local> scope;
 
@@ -60,7 +106,7 @@ struct Snode{
 
 void f1()
 {
-    cout << "test" << endl;
+    ;
 }
 
 void check_type(local &l, int id1, int id2, function<void (void)> f1){
@@ -77,12 +123,14 @@ void check_type(local &l, int id1, int id2, function<void (void)> f1){
 }
 
 void push_tuple(local &l){
-    l.node.push_back(make_tuple("","",0,"",func_sign()));
+
+    l.node.push_back(make_tuple("","",0,"",func_sign(),vector<string>(),""));
 }
 
 void push_tuple_global()
 {
-    node.push_back(make_tuple("","",0,"",func_sign()));;
+    node.push_back(make_tuple("","",0,"",func_sign()));
+
 }
 
 // not used
@@ -101,3 +149,59 @@ void updated_type(int id1, int id2){
     scope.pop();
     scope.push(l);
 }
+
+void get_line(local& l, int id0, int id1, int id2, string op){
+
+    string s;
+
+    string new_temp = get_temp();
+
+    s += (new_temp + " = " + get<6>(l.node[id1]) + " " + op + " " + get<6>(l.node[id2]));
+
+    vector<string> temp = get<5>(l.node[id2]);
+
+    temp.insert(temp.end(), get<5>(l.node[id1]).begin(), get<5>(l.node[id1]).end());
+
+    temp.push_back(s);
+
+    get<5>(l.node[id0]) = temp;
+
+    get<6>(l.node[id0]) = new_temp;
+
+}
+
+void get_assgn(local& l, int id0, int id1, int id2)
+{
+    string s;
+
+    s += (get<6>(l.node[id1]) + " = " + get<6>(l.node[id2]));
+
+    vector<string> temp = get<5>(l.node[id2]);
+
+    temp.push_back(s);
+
+    get<5>(l.node[id0]) = temp;
+
+    get<6>(l.node[id0]) = get<6>(l.node[id1]);
+}
+
+void get_line(local& l,int id0,int id1){
+    get<6>(l.node[id0]) = get<6>(l.node[id1]);
+    get<5>(l.node[id0]) = get<5>(l.node[id1]);
+}
+
+void print_code(local& l,int id){
+    vector<string> code = get<5>(l.node[id]);
+    for(int i = 0; i < code.size();i++){
+        tac<<code[i]<<endl;
+    }
+}
+
+void get_line_func(local& l,int id0, int id1, int param){
+    string s;
+    string new_temp = get_temp();
+    s+=(new_temp + " = call " + get<3>(node[id1]) + " " + to_string(get<4>(l.node[param]).params.size()));
+    get<5>(l.node[id0]).push_back(s);
+    get<6>(l.node[id0]) = new_temp;
+}
+

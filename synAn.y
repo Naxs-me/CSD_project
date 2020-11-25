@@ -94,18 +94,21 @@ function_defination:    ID OB param_def CB OCB {local l;string temp = $1; if(nam
 
                                                                                                   l.name2id[name_1[i]] = temp_id;
                                                                                               }
+
+                                                                                              l.lines.push_back(get_label());              
+                                                                                              l.lines.push_back(get_f(name2id[$1] , $3));
                                                                                           }
                                                                                         }
                                                                                         scope.push(l);
                                                                                         
-                                                                                        }   expression {scope.pop();} CCB {string temp = $1;$$ = name2id[temp];};
+                                                                                        }   expression {scope.top().print_3add();scope.pop();} CCB {string temp = $1;$$ = name2id[temp];};
 
 pram_list:             pram_lists {$$ = $1;}
                         | {$$ = global_id++;push_tuple_global();}
                         ;
 
 pram_lists:             DT COM pram_lists {$$ = $3 ; string temp = $1 ;(get<4>(node[$$]).params).push_back(temp);}
-                        | DT {$$ = global_id++;push_tuple_global(); string temp = $1 ;(get<4>(node[$$]).params).push_back(temp);}
+                        | DT {$$ = global_id++;push_tuple_global(); string temp = $1; (get<4>(node[$$]).params).push_back(temp);}
                         ;
 
 param_def:              param_defs {$$ = $1;}
@@ -117,48 +120,82 @@ param_defs:             ID COM param_defs {$$ = $3 ; string temp = $1 ;(get<4>(n
                         ;
 
 //main function , point where program starts to run
-main:                   MN OB CB OCB {local l; scope.push(l);}io_statements {scope.pop();}CCB;
+main:                   MN OB CB OCB {local l; l.lines.push_back(get_m()); scope.push(l);}io_statements {local l = scope.top();scope.pop(); l.lines[0] += to_string(dec_count); l.print_3add();print_code(l,$6);}CCB;
 
 // io_statement -> IO
-io_statements:          statement
-                        | io_statements statement;
+io_statements:          statement{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get_line(l,$$,$1);scope.push(l);}
+                        | io_statements statement{local l = scope.top();scope.pop();$$ = $1;get<5>(l.node[$1]).insert(get<5>(l.node[$1]).end(), get<5>(l.node[$2]).begin(), get<5>(l.node[$2]).end());scope.push(l);};
 // statement -> IO    
-statement:              io_statement SCL{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])="io";scope.push(l);}
-                        | selection_statement{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])="io";check_type(l,$1,$$,f1);scope.push(l);};
+statement:              io_statement SCL{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])="io";get_line(l,$$,$1);scope.push(l);}
+                        | selection_statement{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])="io";check_type(l,$1,$$,f1);get_line(l,$$,$1);scope.push(l);};
 
 // selection_statement -> expression
-selection_statement:    IF OB or_expression CB OCB or_expression CCB ELS OCB or_expression CCB{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);check_type(l,$10,$6,f1);get<0>(l.node[$$])=get<0>(l.node[$6]);scope.push(l);};
+selection_statement:    IF OB or_expression CB OCB or_expression CCB ELS OCB or_expression CCB{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);check_type(l,$10,$6,f1);get<0>(l.node[$$])=get<0>(l.node[$6]);
+                                                                                            if(get<0>(l.node[$6]) != "io"){
+                                                                                                get<5>(l.node[$$]) = get<5>(l.node[$3]);
+                                                                                                get<5>(l.node[$$]).push_back("if " + get<6>(l.node[$3]) + " goto " + "_L" + to_string(label_id));
+                                                                                                get<5>(l.node[$$]).insert(get<5>(l.node[$$]).end(), get<5>(l.node[$10]).begin(), get<5>(l.node[$10]).end());
+                                                                                                get<5>(l.node[$$]).push_back("_t"+to_string(t_id)+" = "+get<6>(l.node[$10]));
+                                                                                                get<5>(l.node[$$]).push_back(get_label());
+                                                                                                get<5>(l.node[$$]).insert(get<5>(l.node[$$]).end(), get<5>(l.node[$6]).begin(), get<5>(l.node[$6]).end());
+                                                                                                get<5>(l.node[$$]).push_back("_t" + to_string(t_id) + " = " + get<6>(l.node[$6]));
+                                                                                                get<6>(l.node[$$]) = get_temp();
+                                                                                            }
+                                                                                            else
+                                                                                            {
+                                                                                                get<5>(l.node[$$]) = get<5>(l.node[$3]);
+                                                                                                get<5>(l.node[$$]).push_back("if " + get<6>(l.node[$3]) + " goto " + "_L" + to_string(label_id));
+                                                                                                get<5>(l.node[$$]).insert(get<5>(l.node[$$]).end(), get<5>(l.node[$10]).begin(), get<5>(l.node[$10]).end());
+                                                                                                get<5>(l.node[$$]).push_back(get_label());
+                                                                                                get<5>(l.node[$$]).insert(get<5>(l.node[$$]).end(), get<5>(l.node[$6]).begin(), get<5>(l.node[$6]).end());
+                                                                                            }
+                                                                                            scope.push(l);};
 
 // or_expression -> bool
-or_expression:          and_expression{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);scope.push(l);}
-                        | and_expression LOR or_expression{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);check_type(l,$1,$3,f1);get<0>(l.node[$$])=get<0>(l.node[$1]);scope.push(l);};
+or_expression:          and_expression{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);get_line(l,$$,$1);scope.push(l);}
+                        | and_expression LOR or_expression{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);check_type(l,$1,$3,f1);get<0>(l.node[$$])=get<0>(l.node[$1]);get_line(l,$$,$1,$3,"||");scope.push(l);};
 
 // and_expression -> bool                        
-and_expression:         equality_expression {local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);scope.push(l);}
-                        | equality_expression LAND and_expression{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);check_type(l,$1,$3,f1);get<0>(l.node[$$])=get<0>(l.node[$1]);scope.push(l);};
+and_expression:         equality_expression {local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);get_line(l,$$,$1);scope.push(l);}
+                        | equality_expression LAND and_expression{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);check_type(l,$1,$3,f1);get<0>(l.node[$$])=get<0>(l.node[$1]);get_line(l,$$,$1,$3,"&&");scope.push(l);};
 
 // equality_expression -> bool
-equality_expression:    relational_expression{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);scope.push(l);}
-                        | relational_expression EQL equality_expression{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);check_type(l,$1,$3,f1);get<0>(l.node[$$])=get<0>(l.node[$1]);scope.push(l);}
-                        | relational_expression NEQL equality_expression{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);check_type(l,$1,$3,f1);get<0>(l.node[$$])=get<0>(l.node[$1]);scope.push(l);};
+equality_expression:    relational_expression{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);get_line(l,$$,$1);scope.push(l);}
+                        | relational_expression EQL equality_expression{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);check_type(l,$1,$3,f1);get<0>(l.node[$$])=get<0>(l.node[$1]);get_line(l,$$,$1,$3,"==");scope.push(l);}
+                        | relational_expression NEQL equality_expression{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);check_type(l,$1,$3,f1);get<0>(l.node[$$])=get<0>(l.node[$1]);get_line(l,$$,$1,$3,"!=");scope.push(l);};
                         //| expression EQL expression{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);check_type(l,$1,$3,f1);get<0>(l.node[$$])=get<0>(l.node[$1]);scope.push(l);}
                         //| expression NEQL expression{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);check_type(l,$1,$3,f1);get<0>(l.node[$$])=get<0>(l.node[$1]);scope.push(l);};
 
 // relational_expression -> bool
-relational_expression:  expression{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);scope.push(l);}
-                        | expression LT expression{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);check_type(l,$1,$3,f1);get<0>(l.node[$$])=get<0>(l.node[$1]);scope.push(l);}
-                        | expression GT expression{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);check_type(l,$1,$3,f1);get<0>(l.node[$$])=get<0>(l.node[$1]);scope.push(l);}
-                        | expression LTE expression{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);check_type(l,$1,$3,f1);get<0>(l.node[$$])=get<0>(l.node[$1]);scope.push(l);}
-                        | expression GTE expression{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);check_type(l,$1,$3,f1);get<0>(l.node[$$])=get<0>(l.node[$1]);scope.push(l);};
+relational_expression:  expression{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);get_line(l,$$,$1);scope.push(l);}
+                        | expression LT expression{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);check_type(l,$1,$3,f1);get<0>(l.node[$$])=get<0>(l.node[$1]);get_line(l,$$,$1,$3,"<");scope.push(l);}
+                        | expression GT expression{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);check_type(l,$1,$3,f1);get<0>(l.node[$$])=get<0>(l.node[$1]);get_line(l,$$,$1,$3,">");scope.push(l);}
+                        | expression LTE expression{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);check_type(l,$1,$3,f1);get<0>(l.node[$$])=get<0>(l.node[$1]);get_line(l,$$,$1,$3,"<=");scope.push(l);}
+                        | expression GTE expression{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);check_type(l,$1,$3,f1);get<0>(l.node[$$])=get<0>(l.node[$1]);get_line(l,$$,$1,$3,">=");scope.push(l);};
 
 
 // io_statement -> IO
-io_statement:           assignment_statement{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);scope.push(l);}
-                        | output_statement{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);scope.push(l);}
-                        | block{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);scope.push(l);}
-                        | declaration_statement{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);scope.push(l);};
+io_statement:           assignment_statement{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);get_line(l,$$,$1);scope.push(l);}
+                        | output_statement{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);get_line(l,$$,$1);scope.push(l);}
+                        | block{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);get_line(l,$$,$1);scope.push(l);}
+                        | declaration_statement{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);get_line(l,$$,$1);scope.push(l);};
 
-declaration_statement:  DT ID {local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])="io";int temp = l.local_id++;push_tuple(l);string s2 = $2;string s1 = $1;l.name2id[s2] = temp;get<0>(l.node[temp]) = s1; get<3>(l.node[temp]) = s2;scope.push(l);};
+declaration_statement:  DT ID {
+                                local l = scope.top();
+                                scope.pop();$$ = l.local_id++;
+                                push_tuple(l);get<0>(l.node[$$])="io";
+                                int temp = l.local_id++;
+                                push_tuple(l);
+                                string s2 = $2;
+                                string s1 = $1;
+                                l.name2id[s2] = temp;
+                                get<6>(l.node[temp]) = s2;
+                                get<0>(l.node[temp]) = s1; 
+                                get<3>(l.node[temp]) = s2;
+                                get<5>(l.node[$$]).push_back(s1 + " " + s2);
+                                scope.push(l); 
+                                dec_count++;
+                                };
 
 // assignment_statement -> IO
 assignment_statement:   ID ASG expression{local l = scope.top();scope.pop();
@@ -170,29 +207,30 @@ assignment_statement:   ID ASG expression{local l = scope.top();scope.pop();
                                                 cout << "Variable not declared!!" << endl;
                                                 exit(0);
                                             }
+                                            get_assgn(l,$$,l.name2id[$1],$3);
                                         scope.push(l);};
 
 // output_statement -> IO
 output_statement:       OS;
 
 // block -> IO
-block:                  BLK OCB io_statements CCB{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])="io";scope.push(l);};
+block:                  BLK OCB io_statements CCB{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])="io";get_line(l,$$,$3);scope.push(l);};
 
 
-expression:             function_call{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);scope.push(l);}
-                        | io_statement SCL {local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);scope.push(l);}
-                        | selection_statement{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);scope.push(l);}
-                        | additive_expression{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);scope.push(l);}
+expression:             function_call{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);get_line(l,$$,$1);scope.push(l);}
+                        | io_statement SCL {local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);get_line(l,$$,$1);scope.push(l);}
+                        | selection_statement{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);get_line(l,$$,$1);scope.push(l);}
+                        | additive_expression{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);get_line(l,$$,$1);scope.push(l);}
                         ;
 
-additive_expression:    multiplicative_expression{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);scope.push(l);}
-                        | additive_expression PLS multiplicative_expression{local l = scope.top();scope.pop();check_type(l,$1,$3,f1); $$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);scope.push(l);}
-                        | additive_expression MIN multiplicative_expression{local l = scope.top();scope.pop();check_type(l,$1,$3,f1); $$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);scope.push(l);};
+additive_expression:    multiplicative_expression{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);get<6>(l.node[$$])=get<6>(l.node[$1]);get_line(l,$$,$1);scope.push(l);}
+                        | additive_expression PLS multiplicative_expression{local l = scope.top();scope.pop();check_type(l,$1,$3,f1); $$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);get_line(l,$$,$1,$3,"+");scope.push(l);}
+                        | additive_expression MIN multiplicative_expression{local l = scope.top();scope.pop();check_type(l,$1,$3,f1); $$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);get_line(l,$$,$1,$3,"-");scope.push(l);};
 
-multiplicative_expression:  identifier{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);scope.push(l);}
-                            | multiplicative_expression STR identifier{local l = scope.top();scope.pop();check_type(l,$1,$3,f1);$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);scope.push(l);} 
-                            | multiplicative_expression FSH identifier{local l = scope.top();scope.pop();check_type(l,$1,$3,f1);$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);scope.push(l);}
-                            | multiplicative_expression PCT identifier{local l = scope.top();scope.pop();check_type(l,$1,$3,f1);$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);scope.push(l);};
+multiplicative_expression:  identifier{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);get_line(l,$$,$1);scope.push(l);}
+                            | multiplicative_expression STR identifier{local l = scope.top();scope.pop();check_type(l,$1,$3,f1);$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);get_line(l,$$,$1,$3,"*");scope.push(l);} 
+                            | multiplicative_expression FSH identifier{local l = scope.top();scope.pop();check_type(l,$1,$3,f1);$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);get_line(l,$$,$1,$3,"/");scope.push(l);}
+                            | multiplicative_expression PCT identifier{local l = scope.top();scope.pop();check_type(l,$1,$3,f1);$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);get_line(l,$$,$1,$3,"%");scope.push(l);};
 
 identifier:             NUM{local l = scope.top();scope.pop();
                             $$ = l.local_id++;
@@ -200,6 +238,7 @@ identifier:             NUM{local l = scope.top();scope.pop();
                             string tmp = $1;
                             get<1>(l.node[$$]) = tmp;
                             get<0>(l.node[$$]) = "int";
+                            get<6>(l.node[$$]) = tmp;
                             scope.push(l);}
                         | ID{
                                 local l = scope.top();scope.pop();
@@ -214,6 +253,7 @@ identifier:             NUM{local l = scope.top();scope.pop();
                                     push_tuple(l);
                                     l.node[$$] = l.node[l.name2id[tmp]];
                                 }
+                                get<6>(l.node[$$]) = tmp;
                                 scope.push(l);
                             };
 
@@ -243,6 +283,7 @@ function_call:          ID OB parameter_list CB {local l = scope.top();scope.pop
                                                             exit(0);
                                                         }
                                                     }
+                                                    get_line_func(l,$$,t,$3);
                                                     
                         scope.push(l);};
 
@@ -258,7 +299,7 @@ parameter_lists:        expression COM parameter_lists {local l = scope.top();sc
 
 int main(int argc, char** argv)
 {
-   
+    
     yyin = fopen(argv[1], "r");
     yyparse();
 }
