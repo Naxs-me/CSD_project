@@ -136,9 +136,12 @@ selection_statement:    IF OB or_expression CB OCB or_expression CCB ELS OCB or_
                                                                                                 get<5>(l.node[$$]).push_back("if " + get<6>(l.node[$3]) + " goto " + "_L" + to_string(label_id));
                                                                                                 get<5>(l.node[$$]).insert(get<5>(l.node[$$]).end(), get<5>(l.node[$10]).begin(), get<5>(l.node[$10]).end());
                                                                                                 get<5>(l.node[$$]).push_back("_t"+to_string(t_id)+" = "+get<6>(l.node[$10]));
-                                                                                                get<5>(l.node[$$]).push_back(get_label());
+                                                                                                string if_label = get_label();
+                                                                                                get<5>(l.node[$$]).push_back("goto _L" + to_string(label_id));
+                                                                                                get<5>(l.node[$$]).push_back(if_label);
                                                                                                 get<5>(l.node[$$]).insert(get<5>(l.node[$$]).end(), get<5>(l.node[$6]).begin(), get<5>(l.node[$6]).end());
                                                                                                 get<5>(l.node[$$]).push_back("_t" + to_string(t_id) + " = " + get<6>(l.node[$6]));
+                                                                                                get<5>(l.node[$$]).push_back(get_label());
                                                                                                 get<6>(l.node[$$]) = get_temp();
                                                                                             }
                                                                                             else
@@ -146,8 +149,11 @@ selection_statement:    IF OB or_expression CB OCB or_expression CCB ELS OCB or_
                                                                                                 get<5>(l.node[$$]) = get<5>(l.node[$3]);
                                                                                                 get<5>(l.node[$$]).push_back("if " + get<6>(l.node[$3]) + " goto " + "_L" + to_string(label_id));
                                                                                                 get<5>(l.node[$$]).insert(get<5>(l.node[$$]).end(), get<5>(l.node[$10]).begin(), get<5>(l.node[$10]).end());
-                                                                                                get<5>(l.node[$$]).push_back(get_label());
+                                                                                                string if_label = get_label();
+                                                                                                get<5>(l.node[$$]).push_back("goto _L" + to_string(label_id));
+                                                                                                get<5>(l.node[$$]).push_back(if_label);
                                                                                                 get<5>(l.node[$$]).insert(get<5>(l.node[$$]).end(), get<5>(l.node[$6]).begin(), get<5>(l.node[$6]).end());
+                                                                                                get<5>(l.node[$$]).push_back(get_label());
                                                                                             }
                                                                                             scope.push(l);};
 
@@ -287,12 +293,12 @@ function_call:          ID OB parameter_list CB {local l = scope.top();scope.pop
                                                     
                         scope.push(l);};
 
-parameter_list:         parameter_lists {$$ = $1;}
+parameter_list:         parameter_lists {local l = scope.top();scope.pop();$$ = $1;get_line(l,$$,$1);scope.push(l);}
                         | {local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);scope.push(l);}   
                         ;
 
-parameter_lists:        expression COM parameter_lists {local l = scope.top();scope.pop();$$ = $3 ; string temp = get<0>(l.node[$1]);(get<4>(l.node[$$]).params).push_back(temp);scope.push(l);}
-                        | expression {local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l); string temp = get<0>(l.node[$1]) ;(get<4>(l.node[$$]).params).push_back(temp);scope.push(l);}
+parameter_lists:        expression COM parameter_lists {local l = scope.top();scope.pop();$$ = $3 ; string temp = get<0>(l.node[$1]);(get<4>(l.node[$$]).params).push_back(temp);get_line_param(l,$$,$1,$3);scope.push(l);}
+                        | expression {local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l); string temp = get<0>(l.node[$1]);(get<4>(l.node[$$]).params).push_back(temp);get<4>(l.node[$$]).last_var.insert(get<4>(l.node[$$]).last_var.begin(),get<6>(l.node[$1]));get_line(l,$$,$1);scope.push(l);}
                         ;
 
 %%

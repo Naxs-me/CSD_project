@@ -12,7 +12,7 @@ class func_sign{
     public:
     
     vector<string> params;
-    vector<unsigned long long> vars;
+    vector<string> last_var;
 
 };
 
@@ -200,8 +200,25 @@ void print_code(local& l,int id){
 void get_line_func(local& l,int id0, int id1, int param){
     string s;
     string new_temp = get_temp();
-    s+=(new_temp + " = call " + get<3>(node[id1]) + " " + to_string(get<4>(l.node[param]).params.size()));
+    vector<string> temp = get<5>(l.node[param]);
+    get<5>(l.node[id0]) = temp;
+    //temp.insert(temp.end(), get<5>(l.node[id1]).begin(), get<5>(l.node[id1]).end());
+    for(int i = 0; i<get<4>(l.node[param]).last_var.size();i++){
+        s = ("pushParam " + get<4>(l.node[param]).last_var[i]);
+        get<5>(l.node[id0]).push_back(s);
+    }
+    
+    s = (new_temp + " = call " + get<3>(node[id1]) + " " + to_string(get<4>(l.node[param]).params.size()));
     get<5>(l.node[id0]).push_back(s);
     get<6>(l.node[id0]) = new_temp;
+}
+
+void get_line_param(local& l,int id0,int id1,int id2){
+    vector<string> temp = get<5>(l.node[id1]);
+    temp.insert(temp.end(), get<5>(l.node[id2]).begin(), get<5>(l.node[id2]).end());
+    get<5>(l.node[id0]) = temp;
+    get<4>(l.node[id2]).last_var.insert(get<4>(l.node[id2]).last_var.begin(),get<6>(l.node[id1]));
+    get<4>(l.node[id0]) = get<4>(l.node[id2]);
+    
 }
 
