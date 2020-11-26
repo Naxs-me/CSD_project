@@ -23,22 +23,12 @@ class local{
     vector<tuple<string , string , int , string ,   func_sign     , vector<string>  ,   string> > node;
     unsigned long long int local_id;
     map<string , int> name2id;
-    vector<string> lines;
     local();
-    void print_3add();
 };
 
 local::local()
 {
     local_id = 0;
-}
-
-void local::print_3add()
-{
-    for(int i = 0; i < lines.size(); i++)
-    {
-        tac << lines[i] << endl;
-    }
 }
 
 //  name     id
@@ -50,6 +40,8 @@ unsigned long long global_id = 0;
 unsigned long long label_id = 0;
 unsigned long long t_id = 0;
 unsigned long long dec_count = 0;
+
+vector<string> complete_code;
 
 string get_f(int id1, int id2)
 {
@@ -190,10 +182,9 @@ void get_line(local& l,int id0,int id1){
     get<5>(l.node[id0]) = get<5>(l.node[id1]);
 }
 
-void print_code(local& l,int id){
-    vector<string> code = get<5>(l.node[id]);
-    for(int i = 0; i < code.size();i++){
-        tac<<code[i]<<endl;
+void print_code(){
+    for(int i = 0; i < complete_code.size();i++){
+        tac<<complete_code[i]<<endl;
     }
 }
 

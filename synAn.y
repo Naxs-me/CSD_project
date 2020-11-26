@@ -23,6 +23,8 @@
 
 %type <dval> NUM
 %type <lexeme> ID
+%type <id> main
+%type <id> function_def
 %type <id> io_statement
 %type <id> io_statements
 %type <id> statement
@@ -43,7 +45,6 @@
 %type <id> parameter_list
 %type <id> parameter_lists
 %type <id> function_declaration
-%type <id> function_defination
 %type <id> pram_list 
 %type <id> pram_lists 
 %type <id> param_def
@@ -52,9 +53,9 @@
 %type <id> OS
 
 %%
-program:                upper_chunk main;
+program:                upper_chunk main{print_code();};
 
-upper_chunk:            function_declaration function_defination upper_chunk
+upper_chunk:            function_declaration function_def upper_chunk
 			            |
                         ;
 
@@ -68,7 +69,7 @@ function_declaration:    DT ID OB pram_list CB SCL {$$ = $4 ; string temp = $1 ;
                                                                                                                                }                                        
                                                                                                                                                                         };
 
-function_defination:    ID OB param_def CB OCB {local l;string temp = $1; if(name2id.find(temp) == name2id.end())
+function_def:    ID OB param_def CB OCB {local l;string temp = $1; if(name2id.find(temp) == name2id.end())
                                                                                         {
                                                                                             cout <<"Error- function " << temp << " not declared!!" << endl;
                                                                                             exit(0);
@@ -95,13 +96,14 @@ function_defination:    ID OB param_def CB OCB {local l;string temp = $1; if(nam
                                                                                                   l.name2id[name_1[i]] = temp_id;
                                                                                               }
 
-                                                                                              l.lines.push_back(get_label());              
-                                                                                              l.lines.push_back(get_f(name2id[$1] , $3));
+                                                                                              
+                                                                                              complete_code.push_back(get_label());              
+                                                                                              complete_code.push_back(get_f(name2id[$1] , $3));
                                                                                           }
                                                                                         }
                                                                                         scope.push(l);
                                                                                         
-                                                                                        }   expression {get<5>(scope.top().node[$7]).push_back("return " + get<6>(scope.top().node[$7]));scope.top().print_3add();print_code(scope.top(),$7);scope.pop();} CCB {string temp = $1;$$ = name2id[temp];};
+                                                                                        }   expression {local l = scope.top(); scope.pop();get<5>(l.node[$7]).push_back("return " + get<6>(l.node[$7]));complete_code.insert(complete_code.end(), get<5>(l.node[$7]).begin(), get<5>(l.node[$7]).end());} CCB {string temp = $1;$$ = name2id[temp];};
 
 pram_list:             pram_lists {$$ = $1;}
                         | {$$ = global_id++;push_tuple_global();}
@@ -120,7 +122,7 @@ param_defs:             ID COM param_defs {$$ = $3 ; string temp = $1 ;(get<4>(n
                         ;
 
 //main function , point where program starts to run
-main:                   MN OB CB OCB {local l; l.lines.push_back(get_m()); scope.push(l);}io_statements {local l = scope.top();scope.pop(); l.lines[0] += to_string(dec_count); l.print_3add();print_code(l,$6);}CCB;
+main:                   MN OB CB OCB {local l;complete_code.insert(complete_code.begin(),get_m()); scope.push(l);}io_statements CCB {local l = scope.top();scope.pop();complete_code[0] += to_string(dec_count);complete_code.insert(complete_code.begin() + 1, get<5>(l.node[$6]).begin(), get<5>(l.node[$6]).end());};
 
 // io_statement -> IO
 io_statements:          statement{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get_line(l,$$,$1);scope.push(l);}
