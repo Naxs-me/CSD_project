@@ -97,8 +97,8 @@ function_def:    ID OB param_def CB OCB {local l;string temp = $1; if(name2id.fi
                                                                                               }
 
                                                                                               
-                                                                                              complete_code.push_back(get_label());              
-                                                                                              complete_code.push_back(get_f(name2id[$1] , $3));
+                                                                                              //complete_code.push_back(get_label());              
+                                                                                              complete_code.push_back(get_f(name2id[$1] , $3,name2id[temp]));
                                                                                           }
                                                                                         }
                                                                                         scope.push(l);
@@ -204,6 +204,23 @@ declaration_statement:  DT ID {
                                 scope.push(l); 
                                 dec_count++;
                                 };
+                        | DT ID OSB expression CSB{
+                                local l = scope.top();
+                                scope.pop();$$ = l.local_id++;
+                                push_tuple(l);get<0>(l.node[$$])="io";
+                                int temp = l.local_id++;
+                                push_tuple(l);
+                                string s2 = $2;
+                                string s1 = $1;
+                                l.name2id[s2] = temp;
+                                get<6>(l.node[temp]) = s2;
+                                get<0>(l.node[temp]) = s1; 
+                                get<3>(l.node[temp]) = s2;
+                                get<5>(l.node[$$]) = get<5>(l.node[$4]);
+                                get<5>(l.node[$$]).push_back(s1 + " " + s2 + " " + get<6>(l.node[$4]));
+                                scope.push(l); 
+                                dec_count++;
+                                };
 
 // assignment_statement -> IO
 assignment_statement:   ID ASG expression{local l = scope.top();scope.pop();
@@ -216,6 +233,17 @@ assignment_statement:   ID ASG expression{local l = scope.top();scope.pop();
                                                 exit(0);
                                             }
                                             get_assgn(l,$$,l.name2id[$1],$3);
+                                        scope.push(l);}
+                        | ID OSB expression CSB ASG expression{local l = scope.top();scope.pop();
+                                            $$ = l.local_id++;
+                                            push_tuple(l);
+                                            get<0>(l.node[$$])="io";
+                                            string tmp = $1; 
+                                            if(l.name2id.find(tmp) == l.name2id.end()){
+                                                cout << "Variable not declared!!" << endl;
+                                                exit(0);
+                                            }
+                                            get_assgn(l,$$,l.name2id[$1],$3,$6);
                                         scope.push(l);};
 
 // output_statement -> IO
@@ -225,8 +253,8 @@ output_statement:       OS;
 block:                  BLK OCB io_statements CCB{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])="io";get_line(l,$$,$3);scope.push(l);};
 
 
-expression:             function_call{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);get_line(l,$$,$1);scope.push(l);}
-                        | io_statement SCL {local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);get_line(l,$$,$1);scope.push(l);}
+expression:             
+                         io_statement SCL {local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);get_line(l,$$,$1);scope.push(l);}
                         | selection_statement{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);get_line(l,$$,$1);scope.push(l);}
                         | additive_expression{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);get_line(l,$$,$1);scope.push(l);}
                         ;
@@ -263,7 +291,27 @@ identifier:             NUM{local l = scope.top();scope.pop();
                                 }
                                 get<6>(l.node[$$]) = tmp;
                                 scope.push(l);
+                            }
+                        | ID OSB expression CSB{
+                                local l = scope.top();scope.pop();
+                                string tmp = $1;
+                                if(l.name2id.find(tmp) == l.name2id.end()){
+                                    cout << "Variable not declared!!" << endl;
+                                    exit(0);
+                                }
+                                else
+                                {
+                                    $$ = l.local_id++;
+                                    push_tuple(l);
+                                    l.node[$$] = l.node[l.name2id[tmp]];
+                                }
+                                string s = get_temp();
+                                get<5>(l.node[$$]) = get<5>(l.node[$3]);
+                                get<5>(l.node[$$]).push_back(s + " = *(" + $1 + " + " + get<6>(l.node[$3]) + ")");
+                                get<6>(l.node[$$]) = s;
+                                scope.push(l);
                             };
+                            | function_call{local l = scope.top();scope.pop();$$ = l.local_id++;push_tuple(l);get<0>(l.node[$$])=get<0>(l.node[$1]);get_line(l,$$,$1);scope.push(l);}
 
 function_call:          ID OB parameter_list CB {local l = scope.top();scope.pop();
                                                     $$ = l.local_id++;
@@ -309,6 +357,13 @@ int main(int argc, char** argv)
 {
     
     yyin = fopen(argv[1], "r");
+    
+    string temp = argv[1];
+
+    output_file_name = (temp.substr(0,temp.length() - 3) + "3AC.txt");
+
+    tac.open(output_file_name);
+
     yyparse();
 }
 

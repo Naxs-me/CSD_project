@@ -4,7 +4,9 @@ using namespace std;
 
 typedef unsigned long long intl;
 
-ofstream tac("AC.txt");
+string output_file_name;
+
+ofstream tac;
 
 
 class func_sign{
@@ -19,8 +21,8 @@ class func_sign{
 
 class local{
     public:
-    //          0 type    1 value  2 line 3 name  4 function_sign 5 current code  6 last variable
-    vector<tuple<string , string , int , string ,   func_sign     , vector<string>  ,   string> > node;
+    //          0 type    1 value  2 line 3 name  4 function_sign 5 current code  6 last variable  size
+    vector<tuple<string , string , int , string ,   func_sign     , vector<string>  ,   string   ,  int> > node;
     unsigned long long int local_id;
     map<string , int> name2id;
     local();
@@ -43,7 +45,7 @@ unsigned long long dec_count = 0;
 
 vector<string> complete_code;
 
-string get_f(int id1, int id2)
+string get_f(int id1, int id2, int id3)
 {
     string s = "function ";
 
@@ -53,8 +55,12 @@ string get_f(int id1, int id2)
 
     vector<string> v = get<4>(node[id2]).params;
 
+    vector<string> u = get<4>(node[id3]).params;
+
     for(int i = v.size()-1 ; i >= 0 ; i--)
     {
+        s += " ";
+        s += u[i];
         s += " ";
         s += v[i];
     }
@@ -116,7 +122,7 @@ void check_type(local &l, int id1, int id2, function<void (void)> f1){
 
 void push_tuple(local &l){
 
-    l.node.push_back(make_tuple("","",0,"",func_sign(),vector<string>(),""));
+    l.node.push_back(make_tuple("","",0,"",func_sign(),vector<string>(),"",0));
 }
 
 void push_tuple_global()
@@ -169,6 +175,21 @@ void get_assgn(local& l, int id0, int id1, int id2)
     s += (get<6>(l.node[id1]) + " = " + get<6>(l.node[id2]));
 
     vector<string> temp = get<5>(l.node[id2]);
+
+    temp.push_back(s);
+
+    get<5>(l.node[id0]) = temp;
+
+    get<6>(l.node[id0]) = get<6>(l.node[id1]);
+}
+
+void get_assgn(local& l, int id0, int id1, int id2, int id3)
+{
+    string s;
+    s = ("*(" + get<6>(l.node[id1]) + " + " + get<6>(l.node[id2]) + ")" + " = " + get<6>(l.node[id3]));
+
+    vector<string> temp = get<5>(l.node[id3]);
+    temp.insert(temp.end(), get<5>(l.node[id2]).begin(), get<5>(l.node[id2]).end());
 
     temp.push_back(s);
 
