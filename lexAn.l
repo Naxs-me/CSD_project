@@ -19,6 +19,8 @@ ID  {ALPH}({ALPH}|{INT})*
 "char"  {strcpy(yylval.type,"char"); return DT;}
 "if"    {return IF;}
 "else"  {return ELS;}
+"print" {return PRT;}
+"getInt" {return GIN;}
 {ID}    {strcpy(yylval.lexeme,yytext) ;return ID;}
 {NUM}   {strcpy(yylval.dval,yytext); return NUM;}
 "?"     {return QM;}
